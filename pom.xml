@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.logictech</groupId>
+    <artifactId>app</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <modules>
+        <module>config</module>
+        <module>api</module>
+        <module>manage</module>
+        <module>framework-support</module>
+        <module>bizz-support</module>
+    </modules>
+    <packaging>pom</packaging>
+
+    <name>app</name>
+    <description>Multi module SpringBoot Project</description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.0.3.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+        <springboot.version>2.0.3.RELEASE</springboot.version>
+        <project.version>0.0.1-SNAPSHOT</project.version>
+        <nekohtml.version>1.9.22</nekohtml.version>
+        <thymeleaflayout.version>2.3.0</thymeleaflayout.version>
+        <thymeleaf.version>3.0.9.RELEASE</thymeleaf.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--<editor-fold desc="项目外部模块">-->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+                <version>${springboot.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <scope>test</scope>
+                <version>${springboot.version}</version>
+            </dependency>
+
+            <!--<editor-fold desc="THYMELEAF 页面模板引擎">-->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-thymeleaf</artifactId>
+                <version>${springboot.version}</version>
+                <!-- 排除掉默认的版本 -->
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.thymeleaf</groupId>
+                        <artifactId>thymeleaf</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.thymeleaf</groupId>
+                        <artifactId>thymeleaf-spring5</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>net.sourceforge.nekohtml</groupId>
+                <artifactId>nekohtml</artifactId>
+                <version>${nekohtml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>nz.net.ultraq.thymeleaf</groupId>
+                <artifactId>thymeleaf-layout-dialect</artifactId>
+                <version>${thymeleaflayout.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.thymeleaf</groupId>
+                <artifactId>thymeleaf-spring5</artifactId>
+                <version>${thymeleaf.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.thymeleaf</groupId>
+                <artifactId>thymeleaf</artifactId>
+                <version>${thymeleaf.version}</version>
+            </dependency>
+            <!--</editor-fold>-->
+
+            <!--<editor-fold desc="AOP">-->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-aop</artifactId>
+                <version>${springboot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjrt</artifactId>
+                <version>${aspectj.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjweaver</artifactId>
+                <version>${aspectj.version}</version>
+            </dependency>
+            <!--</editor-fold>-->
+            <!--</editor-fold>-->
+
+
+            <!--<editor-fold desc="项目内部模块">-->
+
+            <!--API-->
+            <dependency>
+                <groupId>com.logictech</groupId>
+                <artifactId>api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!--管理-->
+            <dependency>
+                <groupId>com.logictech</groupId>
+                <artifactId>manage</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!--配置文件-->
+            <dependency>
+                <groupId>com.logictech</groupId>
+                <artifactId>config</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!--框架支持-->
+            <dependency>
+                <groupId>com.logictech</groupId>
+                <artifactId>framework-support</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!--业务支持-->
+            <dependency>
+                <groupId>com.logictech</groupId>
+                <artifactId>bizz-support</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!--</editor-fold>-->
+        </dependencies>
+    </dependencyManagement>
+</project>
