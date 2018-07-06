@@ -1,9 +1,16 @@
 package com.logictech.framework.aop;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
+import com.logictech.framework.entity.so.AppException;
+import com.logictech.framework.entity.so.FieldError;
+import com.logictech.framework.entity.so.ParamValidException;
+import com.logictech.framework.entity.so.ResultEntity;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.hibernate.validator.internal.engine.path.PathImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
@@ -20,7 +27,9 @@ import javax.validation.ValidatorFactory;
 import javax.validation.executable.ExecutableValidator;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author JG.Hannibal
@@ -30,30 +39,45 @@ import java.util.Set;
 @Component
 public class ControllerLoggerAop {
     /**
-     * 一分钟，即1000ms
+     * 一分钟，即 1000 * 60 ms
      */
-    private static final long ONE_MINUTE = 1000;
+    private static final long ONE_MINUTE = 1000 * 60;
     private static final String HEAD = "##########|    ";
 
     public static final Logger logger = LoggerFactory.getLogger(ControllerLoggerAop.class);
 
-    @Pointcut("execution(* com.logictech.api..*(..)) || " +
-            "execution(* com.logictech.manage..*(..))")
+    @Pointcut("execution(* com.logictech.api.restful..*(..)) || " +
+            "execution(* com.logictech.manage.web..*(..))")
     public void controllerPointCut() {
     }
 
     ParameterNameDiscoverer parameterNameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
 
     @Before("controllerPointCut()")
-    public void doBefore(JoinPoint joinPoint) {
+    public void doBefore(JoinPoint joinPoint) throws ParamValidException {
         // Receives the request and get request content
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         HttpServletRequest request = attributes.getRequest();
-        logger.info(HEAD + "URL : " + request.getRequestURL().toString());
-        logger.info(HEAD + "HTTP_METHOD : " + request.getMethod());
-        logger.info(HEAD + "IP : " + request.getRemoteAddr());
-        logger.info(HEAD + "CLASS_METHOD : " + joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint.getSignature().getName());
-        logger.info(HEAD + "ARGS : " + Arrays.toString(joinPoint.getArgs()));
+        if (logger.isDebugEnabled()) {
+            logger.debug("==========================StartControllerAOP==========================");
+            logger.debug(HEAD + "URL : " + request.getRequestURL().toString());
+            logger.debug(HEAD + "HTTP_METHOD : " + request.getMethod());
+            logger.debug(HEAD + "IP : " + request.getRemoteAddr());
+            logger.debug(HEAD + "CLASS_METHOD : " + joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint
+                    .getSignature().getName());
+            // 请求参数
+            if (joinPoint.getArgs().length == 1) {
+                try {
+                    logger.debug(HEAD + "ARGS : " + JSON.toJSON(joinPoint.getArgs()));
+                } catch (JSONException e) {
+                    // JSON 转换出错的情况
+                    logger.debug(HEAD + "ARGS : " + Arrays.toString(joinPoint.getArgs()));
+                }
+            } else {
+                logger.debug(HEAD + "ARGS : " + Arrays.toString(joinPoint.getArgs()));
+            }
+        }
+
         // =================================
         // 获得切入目标对象
         Object target = joinPoint.getThis();
@@ -62,13 +86,46 @@ public class ControllerLoggerAop {
         // 获得切入的方法
         Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
 
+        // 执行校验，获得校验结果
+        Set<ConstraintViolation<Object>> validResult = validMethodParams(target, method, args);
+
+        if (!validResult.isEmpty()) {
+            // 获得方法的参数名称
+            String[] parameterNames = parameterNameDiscoverer.getParameterNames(method);
+            List<FieldError> errors = validResult.stream().map(constraintViolation -> {
+                // 获得校验的参数路径信息
+                PathImpl pathImpl = (PathImpl) constraintViolation.getPropertyPath();
+                // 获得校验的参数位置
+                int paramIndex = pathImpl.getLeafNode().getParameterIndex();
+                // 获得校验的参数名称
+                String paramName = parameterNames[paramIndex];
+                // 将需要的信息包装成简单的对象，方便后面处理
+                FieldError error = new FieldError();
+                // 参数名称（校验错误的参数名称）
+                error.setName(paramName);
+                // 校验的错误信息
+                error.setMessage(constraintViolation.getMessage());
+                return error;
+            }).collect(Collectors.toList());
+            // 抛出异常，交给上层处理
+            logger.error(HEAD + "参数校验发生错误 ===> {}", errors.toString());
+            ParamValidException ex = new ParamValidException(errors);
+            logger.error(HEAD + "RESPONSE.ERROR : " + JSON.toJSONString(new ResultEntity(ex){{
+                setData(ex.getFieldErrors());
+            }}));
+            logger.error("==========================ErrorEndControllerAOP==========================");
+            throw new ParamValidException(errors);
+        }
+
     }
 
     @AfterReturning(returning = "ret", pointcut = "controllerPointCut()")
     public void doAfterReturning(Object ret) throws Throwable {
         // Processes the request and returns the content
-        logger.info(HEAD + "RESPONSE : " + ret);
-        logger.info("====================================================");
+        if (logger.isDebugEnabled()) {
+            logger.debug(HEAD + "RESPONSE : " + ret);
+            logger.debug("==========================EndControllerAOP==========================");
+        }
     }
 
 
@@ -80,29 +137,12 @@ public class ControllerLoggerAop {
         stopWatch.stop();
 
         Long cost = stopWatch.getTotalTimeMillis();
-        if (cost > ONE_MINUTE) {
+        if (cost > ONE_MINUTE && logger.isDebugEnabled()) {
             MethodSignature signature = (MethodSignature) proceedingJoinPoint.getSignature();
             String methodName = signature.getDeclaringTypeName() + "." + signature.getName();
-
-            logger.info(HEAD + "执行 {} 方法, 用时: {} ms.", methodName, cost);
+            logger.debug(HEAD + "执行 {} 方法, 用时: {} ms.", methodName, cost);
         }
-
-        logger.info("====================================================");
         return obj;
-    }
-
-    /**
-     * 打印方法执行耗时的信息，如果超过了一定的时间，才打印
-     *
-     * @param methodName
-     * @param startTime
-     * @param endTime
-     */
-    private void printExecTime(String methodName, long startTime, long endTime) {
-        long diffTime = endTime - startTime;
-        if (diffTime > ONE_MINUTE) {
-            logger.warn(HEAD + methodName + " 方法执行耗时：" + diffTime + " ms.");
-        }
     }
 
     private final ValidatorFactory factory = Validation.buildDefaultValidatorFactory();

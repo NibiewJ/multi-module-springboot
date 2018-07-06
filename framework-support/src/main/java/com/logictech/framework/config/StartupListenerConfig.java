@@ -1,5 +1,8 @@
 package com.logictech.framework.config;
 
+import com.logictech.framework.aop.ControllerLoggerAop;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
@@ -12,10 +15,12 @@ import org.springframework.stereotype.Service;
 @Component
 public class StartupListenerConfig implements ApplicationListener<ContextRefreshedEvent> {
 
+    public static final Logger logger = LoggerFactory.getLogger(StartupListenerConfig.class);
+
     @Override
     public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
         // todo something after App initialized.
-        System.out.println("启动成功");
+        logger.info("启动成功");
     }
 }
     
